@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Star Wars</title>
+		<style>
+			canvas
+            {
+				border: 1px solid black;
+			}
+			body
+            {
+				width: window.innerWidth;
+				margin: auto;
+			}
+		</style>
+		<script src="GameObject.js"></script>
+        <script src="Player.js"></script>
+        <script src="Enemy.js"></script>
+        <script src="PlayerShot.js"></script>
+        <script src="Background.js"></script>
+        <script src="Explosion.js"></script>
+        <script src="Aim.js"></script>
+        <script src="Functions.js"></script>
+        <script src="EnemyShot.js"></script>
+	</head>
+	<body>
+	<canvas width="1280" height="650">
+		Seu navegador não tem suporte ao canvas!
+		Atualize seu navegador.
+	</canvas>
+	<script>
+		
+        var screen = document.getElementsByTagName("canvas")[0];
+		var ctx = screen.getContext("2d");
+        screen.width  = window.innerWidth - 0.001*window.innerWidth;
+        screen.height = window.innerHeight - 0.007*window.innerHeight;
+        
+        //Variaveis
+        {
+            
+		var fps = 60;
+		var dt = 1/fps;
+        var ok = 0;
+        var tempo = 0;
+        var timerPlayer = 0;
+        var timerEnemy = 0;
+        var backgroundSpeed = -700;
+        var freia = false;
+        var score = 0;
+        var spawTime = 0;
+        var playerLives = 10;
+        var inGame = true;
+        
+		var player = new Player();
+		player.danificado = 0;
+        player.ratio = 32;
+        player.x = screen.width/2;
+        player.y = screen.height/2;
+        
+        var aim = new Aim();
+        aim.ratio = 32;
+        
+        var background = new Background();
+        background.x = screen.height;
+        background.y = screen.height/2;
+        background.ratio = screen.height/2;
+        background.vx = backgroundSpeed;
+        var background2 = new Background();
+        background2.x = 3*screen.height;
+        background2.y = screen.height/2;
+        background2.ratio = screen.height/2;
+        background2.vx = backgroundSpeed;
+        var background3 = new Background();
+        background3.x = 5*screen.height;
+        background3.y = screen.height/2;
+        background3.ratio = screen.height/2;
+        background3.vx = backgroundSpeed;
+        
+        var cloudsImage = new Image();
+        cloudsImage.src = "cloud.png";
+        var cloudBackground = new GameObject();
+        cloudBackground.x = screen.width + 500;
+        cloudBackground.y = screen.height/2;
+        cloudBackground.ratio = screen.height/2;
+        cloudBackground.vx = backgroundSpeed/3;
+        cloudBackground.Draw2 = function()
+        {
+            ctx.drawImage(cloudsImage, this.x-this.ratio, this.y-this.ratio, 2*this.ratio, 2*this.ratio);
+        }
+        var cloudsImage2 = new Image();
+        cloudsImage2.src = "cloud.png";
+        var cloudBackground2 = new GameObject();
+        cloudBackground2.x = screen.width;
+        cloudBackground2.y = screen.height/2;
+        cloudBackground2.ratio = screen.height/2;
+        cloudBackground2.vx = backgroundSpeed/2;
+        cloudBackground2.Draw2 = function()
+        {
+            ctx.drawImage(cloudsImage2, this.x-this.ratio, this.y-this.ratio, 2*this.ratio, 2*this.ratio);
+        }
+        
+		var shots = [];
+        var enemyShots = [];
+		var inimigos = [];
+        var explosions = [];
+		var excluir = [];
+        var excluir2 = [];
+        var excluir3 = [];
+        
+        var mousePos = 0;
+            
+        var audio = new Audio('X-wing Engine Sound - 1 Hour Loop.mp3');
+        audio.volume = 0.3;
+        audio.play();
+        var audio = new Audio('BattleTheme.mp3');
+        audio.volume = 0.8;
+        audio.loop = true;
+        audio.play();
+        
+        }
+    
+        //Mouse
+        {
+            
+        function getMousePos(canvas, evt)
+        {
+            var rect = canvas.getBoundingClientRect();
+            return {
+              x: evt.clientX - rect.left,
+              y: evt.clientY - rect.top
+            };
+        }
+        
+        screen.addEventListener('mousemove', function(evt) {
+            mousePos = getMousePos(screen, evt);
+        }, false);
+        
+        }
+        
+        
+		function Update()
+        {
+            if(inGame)
+            {
+                if(freia)
+                {
+                    freiaPlayer();
+                }
+                if(playerLives <= 0)
+                {
+                    inGame = false;
+                }
+
+                player.speedLimit(500);
+
+                //Chama um grupo de inimigos de acordo com o tempo
+                {
+                    
+                switch(tempo)
+                {
+                    case 100:
+                        var audio = new Audio('tieEngine.mp3');
+                        audio.loop = true;
+                        audio.volume = 0.7;
+                        audio.play();
+                        bloco1();
+                        spawTime = 0;
+                    break;
+                }
+                switch(spawTime)
+                {
+                    case 200:
+                        bloco1();
+                        spawTime = 0;
+                    break;
+                }
+                
+                }
+
+                //Condicao para todos os inimigos atuais atirarem
+                {
+                
+                if(timerEnemy == 50 && inimigos[0] != null)
+                {
+                    var audio = new Audio('tieBlaster.mp3');
+                    for(var i in inimigos)
+                    {
+                        if((Math.abs(inimigos[i].x - player.x) < 200 && Math.abs(inimigos[i].y - player.y) > 1.7*player.ratio) || (inimigos[i].x - player.x) < 0)
+                        {
+
+                        }
+                        else
+                        {
+                            audio.volume = 0.8;
+                            audio.play();
+                            enemyShots.push(createEnemyShot(inimigos[i].x - inimigos[i].ratio/2, inimigos[i].y - inimigos[i].ratio/2, inimigos[i]));
+                            enemyShots.push(createEnemyShot(inimigos[i].x - inimigos[i].ratio/2, inimigos[i].y + inimigos[i].ratio/2, inimigos[i]));
+                        }
+                    }
+                    timerEnemy = 0;
+                }
+                if(timerEnemy == 50)
+                {
+                    timerEnemy = 0;
+                }
+                    
+                }
+
+
+                //Funcoes de movimento
+                {
+                player.Move();
+                background.Move();
+                background2.Move();
+                background3.Move();
+                cloudBackground.Move();
+                cloudBackground2.Move();
+                aim.Move(mousePos.x, mousePos.y);
+                for(var i in inimigos)
+                {
+                    inimigos[i].Move();
+                }
+
+                for(var i in shots)
+                {
+                    shots[i].Move();
+                }
+                for(var i in enemyShots)
+                {
+                    enemyShots[i].Move();
+                }
+                for(var i in explosions)
+                {
+                    explosions[i].Move();
+                }
+                }
+
+
+                //Funcoes para limitacao de movimento
+                {
+                player.WallCollision();
+
+                if(background.x < -screen.height)
+                {
+                    background.x = background3.x + 4*background.ratio;    
+                }
+                if(background2.x < -screen.height)
+                {
+                    background2.x = background.x + 4*background.ratio;
+                }
+                if(background3.x < -screen.height)
+                {
+                    background3.x = background2.x + 4*background.ratio;
+                }
+                if(cloudBackground.x < -screen.height)
+                {
+                    cloudBackground.x = screen.width + screen.height;
+                    cloudBackground.y = Math.random()*(screen.height);
+                }
+                if(cloudBackground2.x < -screen.height)
+                {
+                    cloudBackground2.x = screen.width + screen.height;
+                    cloudBackground2.y = Math.random()*(screen.height);
+                }
+                }
+
+
+                //Limpar a screen
+                ctx.clearRect(0,0, screen.width, screen.height);
+
+                //Funcoes de desenho
+                {
+                background.Draw();
+                background2.Draw();
+                background3.Draw();
+                cloudBackground.Draw2();
+                for(var i in enemyShots)
+                {
+                    enemyShots[i].Draw();
+                }
+                for(var i in inimigos)
+                {
+                    inimigos[i].Draw();
+                }
+                for(var i in shots)
+                {
+                    shots[i].Draw();
+                }
+                player.Draw();
+                for(var i in explosions)
+                {
+                    explosions[i].Draw();
+                }
+                cloudBackground2.Draw2();
+                aim.Draw();
+                ctx.font= screen.height/20 + "px LCD";
+                ctx.fillStyle = "black";
+                ctx.fillText(score, screen.width/1.5 + 3, 50);
+                ctx.fillText("Armor " + playerLives, screen.width/3 - 0.2*screen.width/2 + 3, 50);
+                ctx.fillStyle = "white";
+                ctx.fillText(score, screen.width/1.5, 50);
+                if(playerLives <= 2)
+                {
+                    ctx.fillStyle = "red";
+                }
+                ctx.fillText("Armor " + playerLives, screen.width/3 - 0.2*screen.width/2, 50);
+                }
+
+                //Funcoes para deteccao de colisoes
+                {
+                for(var i in inimigos)
+                {
+                    if(player.CircularCollision(inimigos[i]))
+                    {
+                        var explosion = new Explosion();
+                        explosion.x = inimigos[i].x;
+                        explosion.y = inimigos[i].y;
+                        explosion.ax = backgroundSpeed;
+                        explosion.ratio = 250;
+                        explosion.col = 0;
+                        explosion.col2 = 0;
+                        explosions.push(explosion);
+                        var audio = new Audio('tieExplosion.mp3');
+                        audio.volume = 0.7;
+                        audio.play();
+                        excluir.push(inimigos[i]);
+                        playerLives = 0;
+                    }
+                    if(inimigos[i].x < 0)
+                    {
+                        excluir.push(inimigos[i]);
+                    }
+                    for(var j in shots)
+                    {
+                        if(shots[j].CircularCollision(inimigos[i]))
+                        {
+                            var explosion = new Explosion();
+                            explosion.x = inimigos[i].x;
+                            explosion.y = inimigos[i].y;
+                            explosion.ax = backgroundSpeed;
+                            explosion.ratio = 250;
+                            explosion.col = 0;
+                            explosion.col2 = 0;
+                            explosions.push(explosion);
+
+                            var audio = new Audio('tieExplosion.mp3');
+                            audio.volume = 0.7;
+                            audio.play();
+
+                            score += 1000;
+
+                            inimigos[i].y = 1200;
+                            excluir.push(inimigos[i]);
+                            shots[j].y = -1200;
+                            excluir2.push(shots[j]);
+                        }
+                    }
+                }
+                for(var i in enemyShots)
+                {
+                    if(enemyShots[i].CircularCollision(player))
+                    {
+                        excluir3.push(enemyShots[i]);
+                        var explosion = new Explosion();
+                        explosion.x = player.x;
+                        explosion.y = player.y;
+                        explosion.ax = backgroundSpeed;
+                        explosion.ratio = 250;
+                        explosion.col = 0;
+                        explosion.col2 = 0;
+                        explosions.push(explosion);
+                        var audio = new Audio('tieExplosion.mp3');
+                        audio.play();
+                        playerLives--;
+                    }
+                }
+                }
+
+                //Funcoes para exclusao
+                {
+                for(var j in enemyShots)
+                {
+                    if(enemyShots[j].x > 2000)
+                    {
+                        excluir3.push(enemyShots[j]);    
+                    }
+                }
+                for(var j in shots)
+                {
+                    if(shots[j].x > 2000)
+                    {
+                        excluir2.push(shots[j]);    
+                    }
+                }
+                for(var e in excluir)
+                {
+                    inimigos.splice(inimigos.indexOf(excluir[e]),1);
+                }
+                for(var e in excluir2)
+                {
+                    shots.splice(shots.indexOf(excluir2[e]),1);
+                }
+                for(var e in excluir3)
+                {
+                    enemyShots.splice(enemyShots.indexOf(excluir3[e]),1);
+                }
+                excluir = [];
+                excluir2 = [];
+                excluir3 = [];
+                }
+
+                tempo++;
+                timerPlayer++;
+                timerEnemy++;
+                spawTime++;
+                score++;
+            }
+            else
+            {
+                ctx.font = screen.height/10 + "px LCD";
+                ctx.fillStyle = "black";
+                ctx.fillText("Press f5", screen.width/2 - screen.width/8.1, screen.height/2);
+                ctx.font = screen.height/10 + "px LCD";
+                ctx.fillStyle = "white";
+                ctx.fillText("Press f5", screen.width/2 - screen.width/8, screen.height/2);
+            }
+		}
+        
+		function teclaPressionada(e)
+        {
+            freia = false;
+			console.log("Tecla Pressionada: " + e.keyCode);
+			switch(e.keyCode)
+            {
+				case 32:
+                    if(timerPlayer > 10)
+                    {
+                        if((Math.abs(aim.x - player.x) < 200 && Math.abs(aim.y - player.y) > 1.7*player.ratio) || (aim.x - player.x) < 0)
+                        {
+                            timerPlayer = 0;
+                        }
+                        else
+                        {
+                            var audio = new Audio('xwingBlaster.mp3');
+                            audio.volume = 0.3;
+                            audio.play();
+                            shots.push(createshot(player.x + 2*player.ratio, player.y - 1.7*player.ratio));
+                            shots.push(createshot(player.x + 2*player.ratio, player.y + 1.7*player.ratio));
+                            timerPlayer = 0;
+                        }
+                    }
+				break;
+				case 65:
+					player.ax = -2000;
+				break;
+				case 68:
+					player.ax = 2000;
+				break;
+				case 87:
+					player.ay = -2000;
+				break;
+				case 83:
+					player.ay = 2000;
+				break;
+			}
+		}
+        
+        screen.addEventListener("click", doSomething, false);
+        function doSomething(e)
+        {
+            if(timerPlayer > 10)
+            {
+                if((Math.abs(aim.x - player.x) < 200 && Math.abs(aim.y - player.y) > 1.7*player.ratio) || (aim.x - player.x) < 0)
+                {
+                    timerPlayer = 0;
+                }
+                else
+                {
+                    var audio = new Audio('xwingBlaster.mp3');
+                    audio.volume = 0.3;
+                    audio.play();
+                    shots.push(createshot(player.x + 2*player.ratio, player.y - 1.7*player.ratio));
+                    shots.push(createshot(player.x + 2*player.ratio, player.y + 1.7*player.ratio));
+                    timerPlayer = 0;
+                }
+            }
+        }
+        
+		function teclaSolta(e)
+        {
+            freia = true;
+			console.log("Tecla Solta: " + e.keyCode);
+			switch(e.keyCode)
+            {
+				case 65:
+                    player.ax = 0;
+                break;
+				case 68:
+                    player.ax = 0;
+				break;
+				case 87:
+                    player.ay = 0;
+                break;
+				case 83:
+					player.ay = 0;
+				break;
+			}
+		}
+        
+		setInterval(Update, 1000/fps);
+		addEventListener("keydown", teclaPressionada);
+		addEventListener("keyup", teclaSolta);
+	</script>
+	</body>
+</html>
